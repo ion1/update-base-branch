@@ -34,6 +34,6 @@ Typically SCRIPT will be an executable file such as:
   eval "$cmd"
   
   # Add files to the present directory to populate the upstream branch.
-  2>&3 wget -O "/foo" http://example.net/foo
-  install -D -m 755 "/foo" bar/baz/foo
+  2>&3 wget -O "$SCRATCH/foo" http://example.net/foo
+  install -D -m 755 "$SCRATCH/foo" bar/baz/foo
 
