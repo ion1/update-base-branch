@@ -1,0 +1,39 @@
+update-base-branch – Update the contents of a Git branch with a script
+
+USAGE: update-base-branch [OPTION]... -- SCRIPT [SCRIPT_OPTION]...
+       update-base-branch -w|--wrapper [OPTION]...
+
+Options:
+  -h, --help           Display this help
+  -b, --branch=BRANCH  Update/create the branch BRANCH (default: base)
+  -c, --checkout       Checkout the previous commit (if any) before running
+                       SCRIPT
+      --no-exclude     Tell Git not to respect .gitignore et al.
+  -q, --quiet          Only print error messages
+  -w, --wrapper        Print sh commands to run the caller within
+                       update-base-branch, and exit immediately
+
+SCRIPT will be run within the following environment:
+• The working directory will be a temporary directory. With --checkout, BRANCH
+  (if exists) will be checked out to it. Otherwise it will be empty.
+• SCRATCH is set to another temporary directory, which will be just ignored and
+  finally deleted.
+• CHANGELOG is set to the path to the commit message in case you don’t want to
+  use the default.
+• INITIAL will be a non-empty string if BRANCH doesn’t already exist.
+• The file descriptor 3 will be /dev/null with --quiet, stdout otherwise.
+
+After SCRIPT has been successfully run, a commit will be created, changing
+BRANCH to match the directory contents.
+
+Typically SCRIPT will be an executable file such as:
+
+  #!/bin/sh
+  set -e
+  cmd="$(update-base-branch --wrapper -b upstream)"
+  eval "$cmd"
+  
+  # Add files to the present directory to populate the upstream branch.
+  2>&3 wget -O "/foo" http://example.net/foo
+  install -D -m 755 "/foo" bar/baz/foo
+

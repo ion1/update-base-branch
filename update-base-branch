@@ -1,0 +1,238 @@
+#!/bin/sh
+
+# update-base-branch – Update the contents of a Git branch with a script
+# Copyright © 2009 Johan Kiviniemi
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+set -e
+
+myname="update-base-branch"
+
+usage() {
+  cat <<E
+$myname – Update the contents of a Git branch with a script
+
+USAGE: $myname [OPTION]... -- SCRIPT [SCRIPT_OPTION]...
+       $myname -w|--wrapper [OPTION]...
+
+Options:
+  -h, --help           Display this help
+  -b, --branch=BRANCH  Update/create the branch BRANCH (default: base)
+  -c, --checkout       Checkout the previous commit (if any) before running
+                       SCRIPT
+      --no-exclude     Tell Git not to respect .gitignore et al.
+  -q, --quiet          Only print error messages
+  -w, --wrapper        Print sh commands to run the caller within
+                       $myname, and exit immediately
+
+SCRIPT will be run within the following environment:
+• The working directory will be a temporary directory. With --checkout, BRANCH
+  (if exists) will be checked out to it. Otherwise it will be empty.
+• SCRATCH is set to another temporary directory, which will be just ignored and
+  finally deleted.
+• CHANGELOG is set to the path to the commit message in case you don’t want to
+  use the default.
+• INITIAL will be a non-empty string if BRANCH doesn’t already exist.
+• The file descriptor 3 will be /dev/null with --quiet, stdout otherwise.
+
+After SCRIPT has been successfully run, a commit will be created, changing
+BRANCH to match the directory contents.
+
+Typically SCRIPT will be an executable file such as:
+
+  #!/bin/sh
+  set -e
+  cmd="\$(update-base-branch --wrapper -b upstream)"
+  eval "\$cmd"
+  
+  # Add files to the present directory to populate the upstream branch.
+  2>&3 wget -O "$SCRATCH/foo" http://example.net/foo
+  install -D -m 755 "$SCRATCH/foo" bar/baz/foo
+
+E
+}
+
+branch=base
+checkout_tree=
+git_exclude_standard=true
+quiet=
+wrapper=
+
+opts="$(getopt -s sh -o hb:cqw \
+               -l help,branch:,checkout,no-exclude,quiet,wrapper \
+               -- "$@")"
+eval set -- "$opts"
+
+while true; do
+  case "$1" in
+  -h|--help)
+    usage; exit ;;
+  -b|--branch)
+    branch="$2"; shift 2 ;;
+  -c|--checkout)
+    checkout_tree=true; shift ;;
+  --no-exclude)
+    git_exclude_standard=; shift ;;
+  -q|--quiet)
+    quiet=true; shift ;;
+  -w|--wrapper)
+    wrapper=true; shift ;;
+  --)
+    shift; break ;;
+  *)
+    >&2 printf "%s: The dungeon collapsed\n" "$myname"; exit 1 ;;
+  esac
+done
+
+shellquote() {
+  local space=
+  for arg; do
+    printf '%s' "$space"
+    printf '%s' "$arg" | sed -re "s/'/'\"'\"'/g; s/^/'/; s/$/'/;"
+    space=' '
+  done
+  printf '\n'
+}
+
+print_wrapper() {
+  local cmd="exec $(shellquote "$0")"
+
+  cmd="$cmd --branch $(shellquote "$branch")"
+  [ -n "$checkout_tree" ] && cmd="$cmd --checkout"
+  [ -z "$git_exclude_standard" ] && cmd="$cmd --no-exclude"
+  [ -n "$quiet" ] && cmd="$cmd --quiet"
+
+  cmd="$cmd"' -- "$0" "$@"'
+
+  printf "%s\n" "$cmd;"
+}
+
+if [ -n "$wrapper" ]; then
+  if [ -z "$UPDATE_BASE_BRANCH_RUNNING" ]; then
+    print_wrapper
+  fi
+  exit
+fi
+
+export UPDATE_BASE_BRANCH_RUNNING=true
+
+if [ "$#" -eq 0 ]; then
+  >&2 usage
+  exit 1
+fi
+
+if [ -n "$quiet" ]; then
+  exec 3>/dev/null
+else
+  exec 3>&1
+fi
+
+tempdir="$(mktemp -dt "$myname".XXXXXXXXXX)"
+trap 'rm -fr "$tempdir"' 0 1 2 13 15
+
+changelog="$tempdir/changelog"
+>"$changelog" printf "Automatic commit by %s\n" "$myname"
+
+export GIT_INDEX_FILE="$tempdir/index"
+export GIT_WORK_TREE="$tempdir/working-tree"
+mkdir -p "$GIT_WORK_TREE"
+
+export scratch="$tempdir/scratch-tree"
+mkdir -p "$scratch"
+
+local_ref=refs/heads/"$branch"
+if ! git show-ref --quiet --verify "$local_ref"; then
+  local_ref=
+fi
+
+remote_ref=refs/remotes/origin/"$branch"
+if ! git show-ref --quiet --verify "$remote_ref"; then
+  remote_ref=
+fi
+
+parent_branch="${local_ref:-$remote_ref}"
+
+checkout_tree() {
+  if [ -n "$parent_branch" ]; then
+    # Initialize the working tree with the previous commit.
+    git ls-tree -z -r --full-name "$parent_branch" | \
+      git update-index -z --index-info
+    git checkout-index -a
+  fi
+}
+
+run_script() {
+  (
+    local script="$1"; shift
+
+    # Resolve script’s full path.
+    case "$script" in
+    */*) script="$(readlink -f "$script")" ;;
+    *)   script="$(which "$script")" ;;
+    esac
+
+    cd "$GIT_WORK_TREE"
+
+    local initial=
+    if [ -n "$parent_branch" ]; then
+      initial=true
+    fi
+
+    export SCRATCH="$scratch" CHANGELOG="$changelog" INITIAL="$initial"
+    "$script" "$@"
+  )
+}
+
+do_commit() {
+  local exclude=
+  if [ -n "$git_exclude_standard" ]; then
+    exclude=--exclude-standard
+  fi
+
+  git ls-files -z $exclude --deleted --modified --others | \
+    git update-index -z --add --remove --stdin
+
+  local treehash="$(git write-tree)"
+
+  if [ -n "$parent_branch" ] && \
+     [ "$treehash" = "$(git rev-parse "$parent_branch":)" ]; then
+    >&2 printf "No changes, aborting\n"
+    return 1
+  fi
+
+  >&3 printf "Committing\n"
+
+  local commithash
+  if [ -n "$parent_branch" ]; then
+    commithash="$(git commit-tree "$treehash" -p "$parent_branch" <"$changelog")"
+  else
+    commithash="$(git commit-tree "$treehash" <"$changelog")"
+  fi
+
+  if [ -n "$parent_branch" ] && [ -z "$quiet" ]; then
+    >&3 git diff --stat "$parent_branch" "$commithash"
+  fi
+
+  git update-ref refs/heads/"$branch" "$commithash"
+}
+
+if [ -n "$checkout_tree" ]; then
+  checkout_tree
+fi
+
+run_script "$@"
+
+do_commit
+
+# vim:set et sw=2 sts=2:
