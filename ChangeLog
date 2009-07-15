@@ -1,5 +1,11 @@
 2009-07-15  Johan Kiviniemi  <devel@johan.kiviniemi.name>
 
+	Release 0.0.3
+
+	* Add example scripts using update-base-branch.
+
+2009-07-15  Johan Kiviniemi  <devel@johan.kiviniemi.name>
+
 	Release 0.0.2
 
 	* Fix a stupid typo in README.

@@ -1,0 +1,50 @@
+#!/bin/sh
+
+# update-shorewall – Update ‘upstream’ branch in shorewall config repository
+# Copyright © 2009 Johan Kiviniemi
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# Merging new upstream changes to the configuration is a basically matter of:
+#
+# % ./update-shorewall
+# % git merge upstream
+
+set -e
+cmd="$(update-base-branch --wrapper -b upstream)"
+eval "$cmd"
+
+extract_deb() {
+  local package=shorewall-common
+
+  local debdir="$SCRATCH/deb"
+
+  local version="$(grep-status -n -sVersion -X \
+                               -FPackage --pattern="$package" -a \
+                               -FStatus --pattern='install ok installed')"
+
+  local debfile="${package}_${version}_all.deb"
+
+  (
+    cd "$SCRATCH"
+    >&3 dget "$package=$version"
+    dpkg-deb -x "$debfile" "$debdir"
+  )
+}
+
+extract_deb
+
+rsync -a "$SCRATCH"/deb/etc/shorewall/ ./
+rsync -a "$SCRATCH"/deb/usr/share/doc/shorewall-common/default-config/ ./
+
+# vim:set et sw=2 sts=2:

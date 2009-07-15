@@ -1,0 +1,75 @@
+#!/bin/sh
+
+# update-dotconfig – Update ‘upstream’ branch in author’s dotconfig repository
+# Copyright © 2009 Johan Kiviniemi
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# Merging new upstream changes to the configuration is a basically matter of:
+#
+# % update-dotconfig
+# % git merge upstream
+
+set -e
+cmd="$(update-base-branch --wrapper -b upstream --no-exclude)"
+eval "$cmd"
+
+add_file() {
+  local mode="$1"; shift
+  local path="$1"; shift
+  local localpath="$1"; shift
+
+  install -D -m "$mode" "$localpath" "$path"
+}
+
+add_input() {
+  local mode="$1"; shift
+  local path="$1"; shift
+
+  local tempfile="$SCRATCH/tempfile"
+  >"$tempfile" cat
+  add_file "$mode" "$path" "$tempfile"
+}
+
+add_remote() {
+  local mode="$1"; shift
+  local path="$1"; shift
+  local uri="$1"; shift
+
+  printf "Downloading %s\n" "$uri"
+
+  local tempfile="$SCRATCH/tempfile"
+  2>&3 wget -O "$tempfile" "$uri"
+
+  add_file "$mode" "$path" "$tempfile"
+}
+
+add_file 644 .bashrc /etc/skel/.bashrc
+add_file 644 .config/awesome/rc.lua /etc/xdg/awesome/rc.lua
+add_file 644 .config/awesome/theme.lua /usr/share/awesome/themes/default/theme.lua
+add_file 644 .devscripts /usr/share/devscripts/conf.default
+add_file 644 .mplayer/input.conf /etc/mplayer/input.conf
+
+rodentbane_uri='http://git.glacicle.com/?p=awesome/rodentbane.git;a=blob_plain;f=rodentbane.lua;hb=HEAD'
+shifty_uri='http://git.mercenariesguild.net/?p=awesome.git;a=blob_plain;f=lib/shifty.lua.in;hb=shifty-master'
+update_base_branch_uri='http://github.com/ion1/update-base-branch/raw/master/update-base-branch'
+ximkeys_uri='http://www.pixelbeat.org/scripts/ximkeys'
+
+add_remote 644 .config/awesome/rodentbane.lua "$rodentbane_uri"
+add_remote 644 .config/awesome/shifty.lua "$shifty_uri"
+add_remote 755 .local/bin/update-base-branch "$update_base_branch_uri"
+add_remote 755 .local/bin/ximkeys "$ximkeys_uri"
+
+printf "*\n" | add_input 644 .gitignore
+
+# vim:set et sw=2 sts=2:
