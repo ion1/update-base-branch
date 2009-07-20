@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# update-dotconfig – Update ‘upstream’ branch in author’s dotconfig repository
+# update-dotconfig – Update defaults branch in author’s dotconfig repository
 # Copyright © 2009 Johan Kiviniemi
 #
 # Permission to use, copy, modify, and/or distribute this software for any

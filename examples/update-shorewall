@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# update-shorewall – Update ‘upstream’ branch in shorewall config repository
+# update-shorewall – Update defaults branch in shorewall config repository
 # Copyright © 2009 Johan Kiviniemi
 #
 # Permission to use, copy, modify, and/or distribute this software for any

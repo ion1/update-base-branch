@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# update-base-branch – Update the contents of a Git branch with a script
+# update-base-branch – Track arbitrary external content in Git branch
 # Copyright © 2009 Johan Kiviniemi
 #
 # Permission to use, copy, modify, and/or distribute this software for any
@@ -21,7 +21,7 @@ myname="update-base-branch"
 
 usage() {
   cat <<E
-$myname – Update the contents of a Git branch with a script
+$myname – Track arbitrary external content in Git branch
 
 USAGE: $myname [OPTION]... -- SCRIPT [SCRIPT_OPTION]...
        $myname -w|--wrapper [OPTION]...
