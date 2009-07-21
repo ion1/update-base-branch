@@ -234,4 +234,6 @@ run_script "$@"
 
 do_commit
 
+git gc --auto
+
 # vim:set et sw=2 sts=2:
