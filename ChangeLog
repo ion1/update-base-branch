@@ -1,6 +1,7 @@
 UNRELEASED  Johan Kiviniemi  <devel@johan.kiviniemi.name>
 
 	* Only resolve script’s full path if it’s not in PATH.
+	* No need to export scratch.
 
 2009-07-21  Johan Kiviniemi  <devel@johan.kiviniemi.name>
 

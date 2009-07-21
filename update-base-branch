@@ -148,7 +148,7 @@ export GIT_INDEX_FILE="$tempdir/index"
 export GIT_WORK_TREE="$tempdir/working-tree"
 mkdir -p "$GIT_WORK_TREE"
 
-export scratch="$tempdir/scratch-tree"
+scratch="$tempdir/scratch-tree"
 mkdir -p "$scratch"
 
 local_ref=refs/heads/"$branch"
