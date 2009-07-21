@@ -176,10 +176,9 @@ run_script() {
   (
     local script="$1"; shift
 
-    # Resolve script’s full path.
+    # Resolve script’s full path if it’s not in PATH.
     case "$script" in
     */*) script="$(readlink -f "$script")" ;;
-    *)   script="$(which "$script")" ;;
     esac
 
     cd "$GIT_WORK_TREE"
