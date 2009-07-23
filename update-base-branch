@@ -69,9 +69,14 @@ git_exclude_standard=true
 quiet=
 wrapper=
 
-opts="$(getopt -s sh -o hb:cqw \
-               -l help,branch:,checkout,no-exclude,quiet,wrapper \
-               -- "$@")"
+getopt=getopt
+if which gnugetopt >/dev/null 2>&1; then
+  getopt=gnugetopt
+fi
+
+opts="$("$getopt" -s sh -o hb:cqw \
+                  -l help,branch:,checkout,no-exclude,quiet,wrapper \
+                  -- "$@")"
 eval set -- "$opts"
 
 while true; do
