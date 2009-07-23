@@ -104,7 +104,7 @@ shellquote() {
   local space=
   for arg; do
     printf '%s' "$space"
-    printf '%s' "$arg" | sed -re "s/'/'\"'\"'/g; s/^/'/; s/$/'/;"
+    printf '%s' "$arg" | sed -e "s/'/'\"'\"'/g; s/^/'/; s/$/'/;"
     space=' '
   done
   printf '\n'

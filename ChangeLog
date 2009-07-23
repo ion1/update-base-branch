@@ -5,6 +5,7 @@ UNRELEASED  Johan Kiviniemi  <devel@johan.kiviniemi.name>
 	* Run git gc --auto in the end.
 	* Use gnugetopt if it exists (OpenBSD getopt doesn’t support long
 	  parameters).
+	* Do not use -r with sed, unportable.
 
 2009-07-21  Johan Kiviniemi  <devel@johan.kiviniemi.name>
 
