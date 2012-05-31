@@ -1,4 +1,6 @@
-UNRELEASED  Johan Kiviniemi  <devel@johan.kiviniemi.name>
+2012-05-31  Johan Kiviniemi  <devel@johan.kiviniemi.name>
+
+	Release 0.0.5
 
 	* Only resolve script’s full path if it’s not in PATH.
 	* No need to export scratch.
